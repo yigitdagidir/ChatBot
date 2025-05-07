@@ -3,6 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.MaterialToolbar
@@ -18,14 +19,16 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:clipToPadding="false"
-        android:padding="8dp"
-        app:layout_constraintBottom_toTopOf="@+id/newChatButtonContainer"
+        android:paddingHorizontal="8dp"
+        android:paddingVertical="8dp"
+        app:layout_constraintBottom_toTopOf="@+id/buttonContainer"
         app:layout_constraintTop_toBottomOf="@+id/toolbar" />
 
-    <FrameLayout
-        android:id="@+id/newChatButtonContainer"
+    <LinearLayout
+        android:id="@+id/buttonContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:paddingHorizontal="16dp"
         android:paddingTop="8dp"
         android:paddingBottom="24dp"
@@ -36,7 +39,21 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="New Chat"
-            app:icon="@android:drawable/ic_input_add" />
-    </FrameLayout>
+            android:textColor="@android:color/white"
+            app:cornerRadius="24dp"
+            app:icon="@android:drawable/ic_input_add"
+            app:iconTint="@android:color/white"
+            android:layout_marginBottom="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/settingsButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Settings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            app:cornerRadius="24dp"
+            app:icon="@android:drawable/ic_menu_preferences"
+            app:iconTint="?attr/colorPrimary" />
+    </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

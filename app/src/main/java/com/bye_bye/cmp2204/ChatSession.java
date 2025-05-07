@@ -2,15 +2,33 @@ package com.bye_bye.cmp2204;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
+import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 
 @Entity(tableName = "sessions")
 public class ChatSession {
     @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
     private long id;
+    
+    @ColumnInfo(name = "title")
     private String title;
+    
+    @ColumnInfo(name = "last_message_time")
     private long lastMessageTime;
+    
+    @ColumnInfo(name = "model_type")
     private String modelType; // "openai" or "gemini"
 
+    // Constructor used by Room
+    public ChatSession() {
+        this.lastMessageTime = System.currentTimeMillis();
+        this.modelType = "openai"; // default
+        this.title = "New Chat"; // default
+    }
+    
+    // Constructor used by application code
+    @Ignore
     public ChatSession(String title, String modelType) {
         this.title = title;
         this.lastMessageTime = System.currentTimeMillis();

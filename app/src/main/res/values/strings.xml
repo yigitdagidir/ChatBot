@@ -1,3 +1,17 @@
 <resources>
-    <string name="app_name">CMP2204</string>
+    <string name="app_name">ChatGPT Clone</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="new_chat">New Chat</string>
+    <string name="settings">Settings</string>
+    <string name="clear_history">Clear Chat History</string>
+    <string name="clear_history_message">Are you sure you want to clear all chat history? This action cannot be undone.</string>
+    <string name="clear">Clear</string>
+    <string name="cancel">Cancel</string>
+    <string name="dark_theme">Dark Theme</string>
+    <string name="type_a_message">Type a message…</string>
+    <string name="chat_sessions">Chat Sessions</string>
+    <string name="appearance">Appearance</string>
+    <string name="data_management">Data Management</string>
+    <string name="history_cleared">Chat history cleared successfully</string>
 </resources>

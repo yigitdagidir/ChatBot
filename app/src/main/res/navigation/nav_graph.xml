@@ -2,24 +2,23 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/sidebarFragment">
-
-    <fragment
-        android:id="@+id/sidebarFragment"
-        android:name="com.bye_bye.cmp2204.SidebarFragment"
-        android:label="Chat Sessions">
-        <action
-            android:id="@+id/action_sidebarFragment_to_chatFragment"
-            app:destination="@id/chatFragment" />
-    </fragment>
+    app:startDestination="@id/chatFragment">
 
     <fragment
         android:id="@+id/chatFragment"
         android:name="com.bye_bye.cmp2204.ChatFragment"
-        android:label="Chat" />
+        android:label="Chat">
+        <action
+            android:id="@+id/action_chatFragment_to_settingsFragment"
+            app:destination="@id/settingsFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/settingsFragment"
         android:name="com.bye_bye.cmp2204.SettingsFragment"
-        android:label="Settings" />
+        android:label="Settings">
+        <action
+            android:id="@+id/action_settingsFragment_to_chatFragment"
+            app:destination="@id/chatFragment" />
+    </fragment>
 </navigation>

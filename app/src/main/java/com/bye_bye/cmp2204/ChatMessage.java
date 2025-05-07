@@ -2,16 +2,37 @@ package com.bye_bye.cmp2204;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
+import androidx.room.ColumnInfo;
+import androidx.room.Ignore;
 
 @Entity(tableName = "messages")
 public class ChatMessage {
     @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
     private long id;
+    
+    @ColumnInfo(name = "message")
     private String message;
+    
+    @ColumnInfo(name = "is_from_user")
     private boolean isFromUser;
+    
+    @ColumnInfo(name = "timestamp")
     private long timestamp;
+    
+    @ColumnInfo(name = "session_id")
     private long sessionId;
 
+    // Constructor used by Room
+    public ChatMessage() {
+        this.timestamp = System.currentTimeMillis();
+        this.message = "";
+        this.isFromUser = false;
+        this.sessionId = 0;
+    }
+    
+    // Constructor used by application code
+    @Ignore
     public ChatMessage(String message, boolean isFromUser, long sessionId) {
         this.message = message;
         this.isFromUser = isFromUser;

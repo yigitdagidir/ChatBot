@@ -39,7 +39,7 @@ public class SessionAdapter extends ListAdapter<ChatSession, SessionAdapter.Sess
     @Override
     public SessionViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
-            .inflate(android.R.layout.simple_list_item_2, parent, false);
+            .inflate(R.layout.item_chat_session, parent, false);
         return new SessionViewHolder(view);
     }
 
@@ -56,8 +56,8 @@ public class SessionAdapter extends ListAdapter<ChatSession, SessionAdapter.Sess
 
         SessionViewHolder(@NonNull View itemView) {
             super(itemView);
-            titleText = itemView.findViewById(android.R.id.text1);
-            timeText = itemView.findViewById(android.R.id.text2);
+            titleText = itemView.findViewById(R.id.sessionTitle);
+            timeText = itemView.findViewById(R.id.sessionTimestamp);
             dateFormat = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
         }
 
