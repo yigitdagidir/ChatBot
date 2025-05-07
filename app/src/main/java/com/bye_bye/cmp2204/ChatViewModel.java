@@ -1,171 +1,81 @@
 package com.bye_bye.cmp2204;
 
 import android.app.Application;
-import androidx.lifecycle.AndroidViewModel;
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProvider;
-import androidx.lifecycle.ViewModelStoreOwner;
-import java.util.ArrayList;
-import java.util.List;
+import androidx.annotation.NonNull;
+import androidx.lifecycle.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class ChatViewModel extends AndroidViewModel {
-    private final ChatRepository repository;
-    private LiveData<List<ChatMessage>> messages;
-    private long currentSessionId;
-    private final MutableLiveData<String> currentSessionTitle;
-    private final SharedViewModel sharedViewModel;
-    
-    private final Observer<ChatSession> sessionObserver = new Observer<ChatSession>() {
-        @Override
-        public void onChanged(ChatSession session) {
-            if (session != null) {
-                // Update current session data
-                currentSessionId = session.getId();
-                currentSessionTitle.setValue(session.getTitle());
-                
-                // Load messages for this session
-                loadMessagesForSession(currentSessionId);
-            } else {
-                // Session is null - we may need to create a new one, but only if we're active
-                currentSessionId = -1;
-                messages = new MutableLiveData<>(new ArrayList<>());
-            }
-        }
-    };
-    
-    private final Observer<Boolean> resetObserver = new Observer<Boolean>() {
-        @Override
-        public void onChanged(Boolean reset) {
-            if (reset != null && reset) {
-                // A reset has occurred - create a new session
-                createNewSession();
-            }
-        }
-    };
 
-    public ChatViewModel(Application application) {
-        super(application);
-        repository = new ChatRepository(application);
-        messages = new MutableLiveData<>(new ArrayList<>());
-        currentSessionId = -1; // Invalid ID until set
-        currentSessionTitle = new MutableLiveData<>("New Chat");
-        
-        // Get the SharedViewModel
-        ViewModelStoreOwner viewModelStoreOwner = (ViewModelStoreOwner) application;
-        sharedViewModel = new ViewModelProvider(viewModelStoreOwner).get(SharedViewModel.class);
-        
-        // Observe session changes
-        sharedViewModel.getSelectedSession().observeForever(sessionObserver);
-        
-        // Observe session reset events
-        sharedViewModel.isSessionReset().observeForever(resetObserver);
-        
-        // Create a default session if needed (initially)
-        if (currentSessionId <= 0) {
-            createDefaultSession();
+    private final ChatRepository repo;
+    private final MediatorLiveData<List<ChatMessage>> messages = new MediatorLiveData<>();
+    private LiveData<List<ChatMessage>> roomSource;
+
+    private final MutableLiveData<String> sessionTitle = new MutableLiveData<>("New Chat");
+    private long currentSessionId = -1;
+
+    /* ----- shared selection comes from here ----- */
+    private final SharedViewModel shared;
+
+    public ChatViewModel(@NonNull Application app) {
+        super(app);
+        repo   = new ChatRepository(app);
+        shared = new ViewModelProvider((ViewModelStoreOwner) app)
+                .get(SharedViewModel.class);
+
+        messages.setValue(new ArrayList<>());
+
+        /* whenever the sidebar (or anyone) selects a session → swap the message source */
+        shared.getSelectedSession().observeForever(this::switchToSession);
+
+        /* first run: create an initial session if none exists */
+        if (shared.getSelectedSession().getValue() == null) {
+            createNewSession();                 // this will broadcast itself via shared
         }
     }
 
-    @Override
-    protected void onCleared() {
-        super.onCleared();
-        // Stop observing when ViewModel is destroyed
-        sharedViewModel.getSelectedSession().removeObserver(sessionObserver);
-        sharedViewModel.isSessionReset().removeObserver(resetObserver);
+    /* ---------------- public for UI ---------------- */
+
+    public LiveData<List<ChatMessage>> getMessages()            { return messages; }
+    public LiveData<String>            getCurrentSessionTitle() { return sessionTitle; }
+
+    public void sendMessage(String text) {
+        if (text == null || text.trim().isEmpty()) return;
+        ensureSession();
+        repo.insertMessage(new ChatMessage(text, true, currentSessionId));
+        repo.insertMessage(new ChatMessage("Echo: " + text, false, currentSessionId));
     }
-    
-    private void loadMessagesForSession(long sessionId) {
-        if (sessionId > 0) {
-            messages = repository.getMessagesForSession(sessionId);
-        }
-    }
-    
-    /**
-     * Creates a default session if no session is currently active
-     */
-    private void createDefaultSession() {
-        // This will be used if we don't have a session yet (first launch)
-        ChatSession defaultSession = new ChatSession("New Chat", "openai");
-        long sessionId = repository.insertSessionSync(defaultSession);
-        defaultSession.setId(sessionId);
-        
-        currentSessionId = sessionId;
-        currentSessionTitle.setValue(defaultSession.getTitle());
-        
-        // Add a welcome message
-        ChatMessage welcomeMessage = new ChatMessage(
-            "Hello! How can I assist you today?", 
-            false, 
-            sessionId
-        );
-        repository.insertMessageSync(welcomeMessage);
-        
-        // Inform the shared view model
-        sharedViewModel.selectSession(defaultSession);
-        
-        // Make sure we're observing the right messages
-        loadMessagesForSession(sessionId);
-    }
-    
-    /**
-     * Creates a new chat session and makes it the current session
-     */
+
+    /** Toolbar / FAB use this to start a fresh conversation */
     public void createNewSession() {
-        ChatSession newSession = new ChatSession("New Chat", "openai");
-        long sessionId = repository.insertSessionSync(newSession);
-        newSession.setId(sessionId);
-        
-        currentSessionId = sessionId;
-        currentSessionTitle.setValue(newSession.getTitle());
-        
-        // Add a welcome message
-        ChatMessage welcomeMessage = new ChatMessage(
-            "Hello! How can I assist you today?", 
-            false, 
-            sessionId
-        );
-        repository.insertMessageSync(welcomeMessage);
-        
-        // Inform the shared view model
-        sharedViewModel.selectSession(newSession);
-        
-        // Make sure we're observing the right messages
-        loadMessagesForSession(sessionId);
-    }
-    
-    /**
-     * Ensures we have a valid session before sending messages
-     */
-    private void ensureValidSession() {
-        if (currentSessionId <= 0) {
-            createDefaultSession();
-        }
+        String title = new SimpleDateFormat("'Chat •' MMM dd HH:mm",
+                Locale.getDefault()).format(new Date());
+
+        ChatSession s = new ChatSession(title, "openai");
+        long id       = repo.insertSessionSync(s);
+        s.setId(id);
+
+        repo.insertMessageSync(new ChatMessage(
+                "Hello! How can I assist you today?", false, id));
+
+        shared.selectSession(s);   // <- notifies sidebar and this ViewModel (through observer)
     }
 
-    public LiveData<List<ChatMessage>> getMessages() {
-        return messages;
-    }
-    
-    public LiveData<String> getCurrentSessionTitle() {
-        return currentSessionTitle;
-    }
+    /* ---------------- internals ---------------- */
 
-    public void sendMessage(String message) {
-        // Make sure we have a valid session
-        ensureValidSession();
+    /** Called automatically whenever SharedViewModel changes */
+    public void switchToSession(ChatSession s) {
+        if (s == null) return;
+        currentSessionId = s.getId();
+        sessionTitle.setValue(s.getTitle());
 
-        // Add user message
-        ChatMessage userMessage = new ChatMessage(message, true, currentSessionId);
-        repository.insertMessage(userMessage);
-
-        // Add bot response (echo for now until API integration)
-        ChatMessage botMessage = new ChatMessage("Echo: " + message, false, currentSessionId);
-        repository.insertMessage(botMessage);
+        if (roomSource != null) messages.removeSource(roomSource);
+        roomSource = repo.getMessagesForSession(currentSessionId);
+        messages.addSource(roomSource, messages::setValue);
     }
 
-    public long getCurrentSessionId() {
-        return currentSessionId;
+    private void ensureSession() {
+        if (currentSessionId <= 0) createNewSession();
     }
-} 
+}
