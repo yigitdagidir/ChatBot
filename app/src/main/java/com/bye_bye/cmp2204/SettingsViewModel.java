@@ -36,10 +36,7 @@ public class SettingsViewModel extends AndroidViewModel {
     }
 
     public void clearChatHistory() {
-        // Use repository to delete all chat sessions and messages synchronously
-        repository.deleteAllSessionsSync();
-        
-        // Reset current session in shared view model to force recreation of a new session
-        sharedViewModel.resetSession();
+        repository.wipeDatabaseNow();        // ← synchronous – guaranteed empty DB
+        sharedViewModel.resetSession();      // flag so Chat / Sidebar react
     }
-} 
+}

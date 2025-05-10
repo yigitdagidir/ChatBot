@@ -54,9 +54,6 @@ public class SidebarViewModel extends AndroidViewModel {
         
         // Observe reset events
         sharedViewModel.isSessionReset().observeForever(resetObserver);
-        
-        // Add some dummy sessions for testing if database is empty
-        addDummySessionsIfEmpty();
     }
     
     @Override
@@ -65,34 +62,7 @@ public class SidebarViewModel extends AndroidViewModel {
         // Stop observing when ViewModel is cleared
         sharedViewModel.getSelectedSession().removeObserver(sessionObserver);
         sharedViewModel.isSessionReset().removeObserver(resetObserver);
-    }
-    
-    private void addDummySessionsIfEmpty() {
-        // We'll check in the repository if sessions exist, and if not, add some samples
-        if (sessions.getValue() == null || sessions.getValue().isEmpty()) {
-            // Create a few dummy sessions
-            ChatSession session1 = new ChatSession("New Chat", "openai");
-            long session1Id = repository.insertSessionSync(session1);
-            
-            ChatSession session2 = new ChatSession("Previous Chat", "openai");
-            session2.setLastMessageTime(System.currentTimeMillis() - 3600000); // 1 hour ago
-            long session2Id = repository.insertSessionSync(session2);
-            
-            // Add a dummy message to each session
-            ChatMessage message1 = new ChatMessage("Hello, how can I help you?", false, session1Id);
-            repository.insertMessageSync(message1);
-            
-            ChatMessage message2 = new ChatMessage("Tell me about AI", true, session2Id);
-            repository.insertMessageSync(message2);
-            
-            ChatMessage message3 = new ChatMessage("AI stands for Artificial Intelligence...", false, session2Id);
-            repository.insertMessageSync(message3);
-            
-            // Select the first session by default
-            session1.setId(session1Id);
-            currentSession.setValue(session1);
-            sharedViewModel.selectSession(session1);
-        }
+
     }
 
     public LiveData<List<ChatSession>> getSessions() {

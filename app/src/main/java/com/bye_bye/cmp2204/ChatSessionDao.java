@@ -37,4 +37,8 @@ public interface ChatSessionDao {
     
     @Query("SELECT * FROM sessions WHERE id = :id LIMIT 1")
     ChatSession getSessionByIdSync(long id);
+
+    @Query("SELECT COUNT(*) FROM sessions")
+    int getSessionCount();
+
 } 

@@ -5,6 +5,8 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.*;
+import androidx.lifecycle.Observer;
+
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -44,14 +46,16 @@ public class ChatViewModel extends AndroidViewModel {
         shared = new ViewModelProvider((ViewModelStoreOwner) app)
                 .get(SharedViewModel.class);
 
+        shared.isSessionReset().observeForever(resetObs);
+
+
         messages.setValue(new ArrayList<>());
 
         /* whenever the sidebar (or anyone) selects a session → swap the message source */
         shared.getSelectedSession().observeForever(this::switchToSession);
-
-        /* first run: create an initial session if none exists */
-        if (shared.getSelectedSession().getValue() == null) {
-            createNewSession();                 // this will broadcast itself via shared
+        if (shared.getSelectedSession().getValue() == null && repo.getSessionCount() == 0)
+        {
+            createNewSession();
         }
     }
 
@@ -62,7 +66,12 @@ public class ChatViewModel extends AndroidViewModel {
 
     public void sendMessage(String text) {
         if (text == null || text.trim().isEmpty()) return;
-        ensureSession();
+
+        if (currentSessionId <= 0) {
+            Log.e("ChatViewModel", "No valid session. Message not sent.");
+            return;
+        }
+
         repo.insertMessage(new ChatMessage(text, true, currentSessionId));
 
         Content.Builder msg_builder = new Content.Builder();
@@ -100,7 +109,8 @@ public class ChatViewModel extends AndroidViewModel {
         repo.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
-        shared.selectSession(s);   // <- notifies sidebar and this ViewModel (through observer)
+        shared.selectSession(s);
+        switchToSession(s);
     }
 
     /* ---------------- internals ---------------- */
@@ -126,6 +136,10 @@ public class ChatViewModel extends AndroidViewModel {
         Log.d("ChatViewModel", "History size: " + history.size());
         setChat(model.startChat(history));
     }
+
+    private final Observer<Boolean> resetObs = reset -> {
+        if (Boolean.TRUE.equals(reset)) createNewSession();
+    };
 
     private void ensureSession() {
         if (currentSessionId <= 0) createNewSession();

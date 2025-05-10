@@ -10,6 +10,8 @@ import java.util.concurrent.Executors;
  * Repository for chat data, providing a clean API to the rest of the app
  */
 public class ChatRepository {
+
+    private final AppDatabase db;
     private final ChatMessageDao messageDao;
     private final ChatSessionDao sessionDao;
     private final ExecutorService executor;
@@ -17,12 +19,12 @@ public class ChatRepository {
     // LiveData for sessions and messages
     private final LiveData<List<ChatSession>> allSessions;
     
-    public ChatRepository(Application application) {
-        AppDatabase db = AppDatabase.getDatabase(application);
+    public ChatRepository(Application application)
+    {
+        db = AppDatabase.getDatabase(application);
         messageDao = db.messageDao();
         sessionDao = db.sessionDao();
         executor = Executors.newSingleThreadExecutor();
-        
         allSessions = sessionDao.getAllSessions();
     }
     
@@ -39,7 +41,8 @@ public class ChatRepository {
     /**
      * Inserts a session asynchronously
      */
-    public void insertSession(ChatSession session) {
+    public void insertSession(ChatSession session)
+    {
         executor.execute(() -> {
             long id = sessionDao.insert(session);
             if (session.getId() == 0) {
@@ -59,6 +62,11 @@ public class ChatRepository {
         }
         return id;
     }
+
+
+    public int getSessionCount() {
+        return db.sessionDao().getSessionCount();
+    }
     
     public void updateSession(ChatSession session) {
         executor.execute(() -> sessionDao.update(session));
@@ -70,26 +78,11 @@ public class ChatRepository {
             messageDao.deleteAllFromSession(session.getId());
         });
     }
-    
-    public void deleteAllSessions() {
-        executor.execute(() -> {
-            sessionDao.deleteAll();
-            messageDao.deleteAll();
-        });
-    }
-    
+
     /**
      * Deletes all sessions and messages synchronously 
      * For use in cases where we need to ensure deletion is complete before continuing
      */
-    public void deleteAllSessionsSync() {
-        try {
-            sessionDao.deleteAll();
-            messageDao.deleteAll();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
     
     // Message operations
     
@@ -161,8 +154,18 @@ public class ChatRepository {
         
         return id;
     }
-    
+
+    /* ADD this new method – it runs on the current thread */
+    public void wipeDatabaseNow() {
+        db.messageDao().deleteAll();     // delete messages first
+        db.sessionDao().deleteAll();     // then sessions
+    }
+
+
+
+
     public void deleteAllMessagesForSession(long sessionId) {
         executor.execute(() -> messageDao.deleteAllFromSession(sessionId));
     }
-} 
+}
+
