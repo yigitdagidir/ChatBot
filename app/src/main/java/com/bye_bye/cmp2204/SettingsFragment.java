@@ -7,6 +7,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.Navigation;
@@ -51,7 +52,12 @@ public class SettingsFragment extends Fragment {
 
         themeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
             viewModel.setDarkTheme(isChecked);
+            AppCompatDelegate.setDefaultNightMode(
+                    isChecked ? AppCompatDelegate.MODE_NIGHT_YES
+                            : AppCompatDelegate.MODE_NIGHT_NO
+            );
         });
+
 
         // Setup clear history button
         clearHistoryButton.setOnClickListener(v -> showClearHistoryDialog());
