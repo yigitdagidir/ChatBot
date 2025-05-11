@@ -39,6 +39,13 @@ public class ChatRepository {
     }
     
     /**
+     * Gets a session by ID synchronously (returns null if not found)
+     */
+    public ChatSession getSessionByIdSync(long id) {
+        return sessionDao.getSessionByIdSync(id);
+    }
+    
+    /**
      * Inserts a session asynchronously
      */
     public void insertSession(ChatSession session)
@@ -80,10 +87,43 @@ public class ChatRepository {
     }
 
     /**
-     * Deletes all sessions and messages synchronously 
+     * Deletes all sessions and messages synchronously in a transaction
      * For use in cases where we need to ensure deletion is complete before continuing
      */
-    
+    public void wipeDatabaseNow() {
+        try {
+            // Use a transaction to ensure atomicity
+            db.runInTransaction(() -> {
+                try {
+                    db.messageDao().deleteAll();     // delete messages first
+                    db.sessionDao().deleteAll();     // then sessions
+                } catch (Exception e) {
+                    // Log the error but don't rethrow to allow transaction to complete
+                    android.util.Log.e("ChatRepository", "Error during database wipe", e);
+                }
+            });
+            android.util.Log.d("ChatRepository", "Database wiped successfully");
+        } catch (Exception e) {
+            // Log the error if transaction fails
+            android.util.Log.e("ChatRepository", "Transaction failed during database wipe", e);
+            
+            // Attempt individual deletes without transaction as fallback
+            try {
+                db.messageDao().deleteAll();
+                android.util.Log.d("ChatRepository", "Messages deleted in fallback");
+            } catch (Exception e1) {
+                android.util.Log.e("ChatRepository", "Failed to delete messages in fallback", e1);
+            }
+            
+            try {
+                db.sessionDao().deleteAll();
+                android.util.Log.d("ChatRepository", "Sessions deleted in fallback");
+            } catch (Exception e2) {
+                android.util.Log.e("ChatRepository", "Failed to delete sessions in fallback", e2);
+            }
+        }
+    }
+
     // Message operations
     
     public LiveData<List<ChatMessage>> getMessagesForSession(long sessionId) {
@@ -154,15 +194,6 @@ public class ChatRepository {
         
         return id;
     }
-
-    /* ADD this new method – it runs on the current thread */
-    public void wipeDatabaseNow() {
-        db.messageDao().deleteAll();     // delete messages first
-        db.sessionDao().deleteAll();     // then sessions
-    }
-
-
-
 
     public void deleteAllMessagesForSession(long sessionId) {
         executor.execute(() -> messageDao.deleteAllFromSession(sessionId));

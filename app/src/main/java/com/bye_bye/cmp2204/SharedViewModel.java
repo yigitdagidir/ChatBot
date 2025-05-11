@@ -3,6 +3,7 @@ package com.bye_bye.cmp2204;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+import android.util.Log;
 
 /**
  * Shared ViewModel to pass data between fragments
@@ -16,16 +17,31 @@ public class SharedViewModel extends ViewModel {
     
     // Flag to indicate a model change
     private final MutableLiveData<Boolean> modelChanged = new MutableLiveData<>(false);
+    
+    // Flag to indicate reset is in progress to prevent race conditions
+    private volatile boolean isResetInProgress = false;
 
     /**
      * Set the currently selected chat session
      */
-    public void selectSession(ChatSession session) {
-        selectedSession.setValue(session);
+    public synchronized void selectSession(ChatSession session) {
+        // Don't allow session selection while reset is in progress
+        if (isResetInProgress && session == null) {
+            Log.d("SharedViewModel", "Ignoring null session during reset");
+            return;
+        }
+        
+        if (session != null) {
+            Log.d("SharedViewModel", "Selecting session: " + session.getId() + " - " + session.getTitle());
+        } else {
+            Log.d("SharedViewModel", "Setting session to null");
+        }
+        
+        selectedSession.postValue(session);
         
         // Clear any reset flag when a session is explicitly selected
-        if (sessionReset.getValue()) {
-            sessionReset.setValue(false);
+        if (sessionReset.getValue() && session != null) {
+            sessionReset.postValue(false);
         }
     }
 
@@ -40,12 +56,20 @@ public class SharedViewModel extends ViewModel {
      * Reset the current session, clearing the selection.
      * This will trigger ViewModels to create a new session.
      */
-    public void resetSession() {
-        // Clear the current session
-        selectedSession.setValue(null);
+    public synchronized void resetSession() {
+        Log.d("SharedViewModel", "Resetting session");
+        isResetInProgress = true;
         
-        // Set the reset flag to true
-        sessionReset.setValue(true);
+        try {
+            // Clear the current session
+            selectedSession.postValue(null);
+            
+            // Set the reset flag to true
+            sessionReset.postValue(true);
+        } finally {
+            // Ensure we always clear the flag even if an exception occurs
+            isResetInProgress = false;
+        }
     }
     
     /**
@@ -59,7 +83,7 @@ public class SharedViewModel extends ViewModel {
      * Set the model changed flag
      */
     public void setModelChanged(boolean changed) {
-        modelChanged.setValue(changed);
+        modelChanged.postValue(changed);
     }
     
     /**
@@ -67,5 +91,12 @@ public class SharedViewModel extends ViewModel {
      */
     public LiveData<Boolean> isModelChanged() {
         return modelChanged;
+    }
+    
+    /**
+     * Check if reset is currently in progress
+     */
+    public boolean isResetInProgress() {
+        return isResetInProgress;
     }
 } 

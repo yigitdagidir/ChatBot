@@ -46,8 +46,9 @@ public class ChatViewModel extends AndroidViewModel {
             shared = new ViewModelProvider((ViewModelStoreOwner) app)
                     .get(SharedViewModel.class);
 
-            // Register observers only if shared is successfully initializedshared.isSessionReset().observeForever(resetObs);
-shared.isModelChanged().observeForever(modelChangedObs);
+            // Register observers only if shared is successfully initialized
+            shared.isSessionReset().observeForever(resetObs);
+            shared.isModelChanged().observeForever(modelChangedObs);
         } catch (Exception e) {
             Log.e("ChatViewModel", "Error initializing SharedViewModel: " + e.getMessage());
             // Continue without shared view model functionality
@@ -97,38 +98,81 @@ shared.isModelChanged().observeForever(modelChangedObs);
     public void sendMessage(String text) {
         if (text == null || text.trim().isEmpty()) return;
 
+        // Don't send messages during reset
+        if (shared != null && shared.isResetInProgress()) {
+            Log.w("ChatViewModel", "Attempted to send message during reset, ignoring");
+            return;
+        }
+
         // Create a new session if none exists
         if (currentSessionId <= 0) {
+            Log.d("ChatViewModel", "No current session, creating new one before sending message");
             createNewSession();
         }
 
-        // Now we should have a valid session ID
+        // Double check that we have a valid session ID before sending
         if (currentSessionId <= 0) {
             Log.e("ChatViewModel", "Failed to create session. Message not sent.");
             return;
         }
 
-        repo.insertMessage(new ChatMessage(text, true, currentSessionId));
+        // Verify session exists in database before sending
+        ChatSession session = repo.getSessionByIdSync(currentSessionId);
+        if (session == null) {
+            Log.d("ChatViewModel", "Session no longer exists, creating new session");
+            createNewSession();
+            
+            // Verify we now have a valid session
+            if (currentSessionId <= 0) {
+                Log.e("ChatViewModel", "Failed to create session after second attempt. Message not sent.");
+                return;
+            }
+            
+            // Get the session again after creation
+            session = repo.getSessionByIdSync(currentSessionId);
+            if (session == null) {
+                Log.e("ChatViewModel", "Session still doesn't exist after creation. Message not sent.");
+                return;
+            }
+        }
 
+        final long sessionId = currentSessionId; // Capture for callback
+        Log.d("ChatViewModel", "Sending message to session " + sessionId);
+        
+        // Insert user message
+        repo.insertMessage(new ChatMessage(text, true, sessionId));
+
+        // Build message for AI
         Content.Builder msg_builder = new Content.Builder();
         msg_builder.addText(text);
         msg_builder.setRole("user");
         Content msg = msg_builder.build();
 
+        // Send to AI
         ListenableFuture<GenerateContentResponse> response = getChat().sendMessage(msg);
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
-                repo.insertMessage(
-                        new ChatMessage(result.getText(), false, currentSessionId)
-                );
+                // Verify session still exists before inserting response
+                if (repo.getSessionByIdSync(sessionId) != null) {
+                    repo.insertMessage(
+                            new ChatMessage(result.getText(), false, sessionId)
+                    );
+                } else {
+                    Log.w("ChatViewModel", "Session was deleted before AI response arrived");
+                }
             }
 
             @Override
             public void onFailure(Throwable t) {
-                repo.insertMessage(
-                        new ChatMessage("Error: " + t.getMessage(), false, currentSessionId)
-                );
+                // Verify session still exists before inserting error
+                if (repo.getSessionByIdSync(sessionId) != null) {
+                    repo.insertMessage(
+                            new ChatMessage("Error: " + t.getMessage(), false, sessionId)
+                    );
+                } else {
+                    Log.w("ChatViewModel", "Session was deleted before error could be inserted");
+                }
             }
         }, getApplication().getMainExecutor());
     }
@@ -177,7 +221,12 @@ shared.isModelChanged().observeForever(modelChangedObs);
 
     /** Called automatically whenever SharedViewModel changes */
     public void switchToSession(ChatSession s) {
-        if (s == null) return;
+        if (s == null) {
+            // If session is null, it might be due to reset
+            // Don't change current state until a new session is created
+            Log.d("ChatViewModel", "Received null session, waiting for reset to complete");
+            return;
+        }
 
         Log.d("ChatViewModel", "Switching to session: " + s.getTitle());
         currentSessionId = s.getId();
@@ -225,7 +274,13 @@ shared.isModelChanged().observeForever(modelChangedObs);
     }
 
     private final Observer<Boolean> resetObs = reset -> {
-        if (Boolean.TRUE.equals(reset)) createNewSessionWithWelcome();
+        if (Boolean.TRUE.equals(reset)) {
+            // If we receive a reset signal but don't have a selected session yet,
+            // create a new one with welcome message
+            if (shared.getSelectedSession().getValue() == null) {
+                createNewSessionWithWelcome();
+            }
+        }
     };
 
     private final Observer<Boolean> modelChangedObs = changed -> {
@@ -254,5 +309,24 @@ shared.isModelChanged().observeForever(modelChangedObs);
 
     public void setChat(ChatFutures chat) {
         this.chat = chat;
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        
+        // Remove all observers to prevent memory leaks
+        if (shared != null) {
+            shared.isSessionReset().removeObserver(resetObs);
+            shared.isModelChanged().removeObserver(modelChangedObs);
+            shared.getSelectedSession().removeObserver(this::switchToSession);
+        }
+        
+        // Also clean up message observer
+        messages.removeObserver(messageList -> {
+            if (!isInitializing && messageList != null && !messageList.isEmpty()) {
+                rebuildChatContext();
+            }
+        });
     }
 }

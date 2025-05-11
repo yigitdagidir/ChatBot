@@ -98,20 +98,45 @@ public class SettingsFragment extends Fragment {
             .setTitle(R.string.clear_history)
             .setMessage(R.string.clear_history_message)
             .setPositiveButton(R.string.clear, (dialog, which) -> {
-                // Clear the chat history
-                viewModel.clearChatHistory();
-                
-                // Show confirmation toast
+                // Show a progress indicator
                 Toast.makeText(requireContext(), 
-                    R.string.history_cleared, 
+                    "Clearing history...", 
                     Toast.LENGTH_SHORT).show();
                 
-                // Navigate back to chat fragment
-                try {
-                    Navigation.findNavController(requireView())
-                        .navigate(R.id.action_settingsFragment_to_chatFragment);
-                } catch (Exception e) {
-                    e.printStackTrace();
+                // Clear the chat history - this creates a new session
+                ChatSession newSession = viewModel.clearChatHistory();
+                
+                if (newSession != null) {
+                    // Show success message
+                    Toast.makeText(requireContext(), 
+                        R.string.history_cleared, 
+                        Toast.LENGTH_SHORT).show();
+                    
+                    // Navigate to chat fragment with a short delay to ensure UI updates
+                    requireView().postDelayed(() -> {
+                        try {
+                            if (isAdded() && !isRemoving()) {
+                                // Ensure the session is selected
+                                sharedViewModel.selectSession(newSession);
+                                
+                                // Navigate to chat fragment
+                                Navigation.findNavController(requireView())
+                                    .navigate(R.id.action_settingsFragment_to_chatFragment);
+                                
+                                // Log successful navigation
+                                android.util.Log.d("SettingsFragment", 
+                                    "Navigated to chat fragment for session: " + newSession.getId());
+                            }
+                        } catch (Exception e) {
+                            android.util.Log.e("SettingsFragment", 
+                                "Error navigating after history clear", e);
+                        }
+                    }, 200); // Short delay for UI to update
+                } else {
+                    // Show error message if session creation failed
+                    Toast.makeText(requireContext(), 
+                        "Failed to create new session after clearing history", 
+                        Toast.LENGTH_SHORT).show();
                 }
             })
             .setNegativeButton(R.string.cancel, null)
