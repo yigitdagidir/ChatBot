@@ -34,9 +34,7 @@ public abstract class AppDatabase extends RoomDatabase {
                         AppDatabase.class, 
                         "chat_database"
                     )
-                    // For development only - allows database operations on main thread (avoid in prod)
                     .allowMainThreadQueries()
-                    // Wipes and rebuilds instead of migrating if no Migration object exists
                     .fallbackToDestructiveMigration()
                     .build();
                 }

@@ -9,7 +9,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.lifecycle.ViewModelStoreOwner;
 
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -33,7 +32,6 @@ public class SidebarViewModel extends AndroidViewModel {
         @Override
         public void onChanged(Boolean reset) {
             if (reset != null && reset) {
-                // Reset has occurred, clear current session and wait for new one
                 currentSession.setValue(null);
             }
         }
@@ -45,21 +43,21 @@ public class SidebarViewModel extends AndroidViewModel {
         sessions = repository.getAllSessions();
         currentSession = new MutableLiveData<>();
         
-        // Get the SharedViewModel
+
         ViewModelStoreOwner viewModelStoreOwner = (ViewModelStoreOwner) application;
         sharedViewModel = new ViewModelProvider(viewModelStoreOwner).get(SharedViewModel.class);
         
-        // Observe the shared view model's selected session
+
         sharedViewModel.getSelectedSession().observeForever(sessionObserver);
         
-        // Observe reset events
+
         sharedViewModel.isSessionReset().observeForever(resetObserver);
     }
     
     @Override
     protected void onCleared() {
         super.onCleared();
-        // Stop observing when ViewModel is cleared
+
         sharedViewModel.getSelectedSession().removeObserver(sessionObserver);
         sharedViewModel.isSessionReset().removeObserver(resetObserver);
 
@@ -85,7 +83,7 @@ public class SidebarViewModel extends AndroidViewModel {
         repository.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
-        sharedViewModel.selectSession(s);              // <-- broadcast
+        sharedViewModel.selectSession(s);
     }
 
 
@@ -93,10 +91,10 @@ public class SidebarViewModel extends AndroidViewModel {
         if (session != null) {
             currentSession.setValue(session);
             
-            // Share the selected session with other components
+
             sharedViewModel.selectSession(session);
         } else {
-            // Handle null session - select/create a default one
+
             createNewSession();
         }
     }
@@ -109,17 +107,4 @@ public class SidebarViewModel extends AndroidViewModel {
         }
     }
 
-    public void deleteSession(ChatSession session) {
-        if (session != null) {
-            repository.deleteSession(session);
-            
-            if (currentSession.getValue() != null && 
-                currentSession.getValue().getId() == session.getId()) {
-                currentSession.setValue(null);
-                
-                // Create a new session if this was the last one
-                createNewSession();
-            }
-        }
-    }
-} 
+}

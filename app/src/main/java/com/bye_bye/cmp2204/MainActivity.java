@@ -15,18 +15,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
-        // Enable edge-to-edge display
+
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         EdgeToEdge.enable(this);
         
         setContentView(R.layout.activity_main);
         drawerLayout = findViewById(R.id.main);
 
-        // Set up window insets listener for edge-to-edge display - only apply to main container
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0); // Don't add bottom padding here
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, 0);
             return insets;
         });
     }

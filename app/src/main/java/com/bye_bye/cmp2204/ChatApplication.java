@@ -15,8 +15,6 @@ public class ChatApplication extends Application implements ViewModelStoreOwner 
     public void onCreate() {
         super.onCreate();
         viewModelStore = new ViewModelStore();
-
-        // Apply saved theme on app startup
         DataStoreManager dataStoreManager = new DataStoreManager(this);
         boolean isDark = dataStoreManager.getDarkTheme();
         AppCompatDelegate.setDefaultNightMode(

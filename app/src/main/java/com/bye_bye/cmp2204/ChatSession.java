@@ -18,16 +18,14 @@ public class ChatSession {
     private long lastMessageTime;
     
     @ColumnInfo(name = "model_type")
-    private String modelType; // "openai" or "gemini"
+    private String modelType;
 
-    // Constructor used by Room
     public ChatSession() {
         this.lastMessageTime = System.currentTimeMillis();
-        this.modelType = "openai"; // default
-        this.title = "New Chat"; // default
+        this.modelType = "openai";
+        this.title = "New Chat";
     }
-    
-    // Constructor used by application code
+
     @Ignore
     public ChatSession(String title, String modelType) {
         this.title = title;

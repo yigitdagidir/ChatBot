@@ -27,17 +27,12 @@ public class ChatRepository {
         executor = Executors.newSingleThreadExecutor();
         allSessions = sessionDao.getAllSessions();
     }
-    
-    // Session operations
+
     
     public LiveData<List<ChatSession>> getAllSessions() {
         return allSessions;
     }
-    
-    public LiveData<ChatSession> getSessionById(long id) {
-        return sessionDao.getSessionById(id);
-    }
-    
+
     /**
      * Gets a session by ID synchronously (returns null if not found)
      */
@@ -71,10 +66,6 @@ public class ChatRepository {
     }
 
 
-    public int getSessionCount() {
-        return db.sessionDao().getSessionCount();
-    }
-    
     public void updateSession(ChatSession session) {
         executor.execute(() -> sessionDao.update(session));
     }
@@ -92,22 +83,17 @@ public class ChatRepository {
      */
     public void wipeDatabaseNow() {
         try {
-            // Use a transaction to ensure atomicity
             db.runInTransaction(() -> {
                 try {
-                    db.messageDao().deleteAll();     // delete messages first
-                    db.sessionDao().deleteAll();     // then sessions
+                    db.messageDao().deleteAll();
+                    db.sessionDao().deleteAll();
                 } catch (Exception e) {
-                    // Log the error but don't rethrow to allow transaction to complete
                     android.util.Log.e("ChatRepository", "Error during database wipe", e);
                 }
             });
             android.util.Log.d("ChatRepository", "Database wiped successfully");
         } catch (Exception e) {
-            // Log the error if transaction fails
             android.util.Log.e("ChatRepository", "Transaction failed during database wipe", e);
-            
-            // Attempt individual deletes without transaction as fallback
             try {
                 db.messageDao().deleteAll();
                 android.util.Log.d("ChatRepository", "Messages deleted in fallback");
@@ -123,8 +109,6 @@ public class ChatRepository {
             }
         }
     }
-
-    // Message operations
     
     public LiveData<List<ChatMessage>> getMessagesForSession(long sessionId) {
         return messageDao.getMessagesForSession(sessionId);
@@ -139,17 +123,13 @@ public class ChatRepository {
             if (message.getId() == 0) {
                 message.setId(id);
             }
-            
-            // Use the dedicated method to update just the timestamp
             try {
                 sessionDao.updateLastMessageTime(message.getSessionId(), message.getTimestamp());
             } catch (Exception e) {
                 e.printStackTrace();
-                // Fallback to creating a session if needed
                 try {
                     ChatSession existingSession = sessionDao.getSessionByIdSync(message.getSessionId());
                     if (existingSession == null) {
-                        // Session doesn't exist, create it
                         ChatSession newSession = new ChatSession("New Chat", "openai");
                         newSession.setId(message.getSessionId());
                         newSession.setLastMessageTime(message.getTimestamp());
@@ -171,17 +151,13 @@ public class ChatRepository {
         if (message.getId() == 0) {
             message.setId(id);
         }
-        
-        // Update the session timestamp safely
         try {
             sessionDao.updateLastMessageTime(message.getSessionId(), message.getTimestamp());
         } catch (Exception e) {
             e.printStackTrace();
-            // Fallback in case session doesn't exist
             try {
                 ChatSession existingSession = sessionDao.getSessionByIdSync(message.getSessionId());
                 if (existingSession == null) {
-                    // Create session if needed
                     ChatSession newSession = new ChatSession("New Chat", "openai");
                     newSession.setId(message.getSessionId());
                     newSession.setLastMessageTime(message.getTimestamp());
@@ -195,8 +171,5 @@ public class ChatRepository {
         return id;
     }
 
-    public void deleteAllMessagesForSession(long sessionId) {
-        executor.execute(() -> messageDao.deleteAllFromSession(sessionId));
-    }
 }
 
