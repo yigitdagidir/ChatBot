@@ -30,32 +30,70 @@ public class ChatViewModel extends AndroidViewModel {
     private long currentSessionId = -1;
 
     /* ----- shared selection comes from here ----- */
-    private final SharedViewModel shared;
-
-    private final GenerativeModel _gm = new GenerativeModel(
-            "gemini-2.0-flash",
-            BuildConfig.apiKey
-    );
-    private final GenerativeModelFutures model = GenerativeModelFutures.from(_gm);
-
-    private ChatFutures chat = model.startChat();
+    private SharedViewModel shared;
+    private final DataStoreManager dataStoreManager;
+    
+    private GenerativeModel _gm;
+    private GenerativeModelFutures model;
+    private ChatFutures chat;
+    private boolean isInitializing = false; // Flag to prevent multiple initializations
 
     public ChatViewModel(@NonNull Application app) {
         super(app);
-        repo   = new ChatRepository(app);
-        shared = new ViewModelProvider((ViewModelStoreOwner) app)
-                .get(SharedViewModel.class);
+        repo = new ChatRepository(app);
+        
+        try {
+            shared = new ViewModelProvider((ViewModelStoreOwner) app)
+                    .get(SharedViewModel.class);
+                    
+            // Register observers only if shared is successfully initialized
+            shared.isSessionReset().observeForever(resetObs);
+            shared.isModelChanged().observeForever(modelChangedObs);
+        } catch (Exception e) {
+            Log.e("ChatViewModel", "Error initializing SharedViewModel: " + e.getMessage());
+            // Continue without shared view model functionality
+        }
+        
+        dataStoreManager = new DataStoreManager(app);
 
-        shared.isSessionReset().observeForever(resetObs);
-
-
+        // Initialize empty messages list
         messages.setValue(new ArrayList<>());
+        
+        // Initialize model from DataStore
+        initializeModel();
+
+        // Set up message observer to rebuild chat context when messages change
+        messages.observeForever(messageList -> {
+            if (!isInitializing && messageList != null && !messageList.isEmpty()) {
+                Log.d("ChatViewModel", "Messages changed, rebuilding chat context");
+                rebuildChatContext();
+            }
+        });
 
         /* whenever the sidebar (or anyone) selects a session → swap the message source */
-        shared.getSelectedSession().observeForever(this::switchToSession);
-        if (shared.getSelectedSession().getValue() == null && repo.getSessionCount() == 0)
-        {
-            createNewSession();
+        if (shared != null) {
+            shared.getSelectedSession().observeForever(this::switchToSession);
+            if (shared.getSelectedSession().getValue() == null && repo.getSessionCount() == 0) {
+                createNewSession();
+            }
+        } else {
+            // No shared view model, create new session anyway
+            if (repo.getSessionCount() == 0) {
+                createNewSession();
+            }
+        }
+    }
+
+    private void initializeModel() {
+        isInitializing = true;
+        try {
+            String selectedModel = dataStoreManager.getSelectedModel();
+            Log.d("ChatViewModel", "Initializing model: " + selectedModel);
+            _gm = new GenerativeModel(selectedModel, BuildConfig.apiKey);
+            model = GenerativeModelFutures.from(_gm);
+            chat = model.startChat(); // Start with empty context, will be filled later
+        } finally {
+            isInitializing = false;
         }
     }
 
@@ -102,14 +140,18 @@ public class ChatViewModel extends AndroidViewModel {
         String title = new SimpleDateFormat("'Chat •' MMM dd HH:mm",
                 Locale.getDefault()).format(new Date());
 
-        ChatSession s = new ChatSession(title, "openai");
-        long id       = repo.insertSessionSync(s);
+        // New sessions always use the current selected model
+        String currentModel = dataStoreManager.getSelectedModel();
+        ChatSession s = new ChatSession(title, currentModel);
+        long id = repo.insertSessionSync(s);
         s.setId(id);
 
         repo.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
-        shared.selectSession(s);
+        if (shared != null) {
+            shared.selectSession(s);
+        }
         switchToSession(s);
     }
 
@@ -118,27 +160,70 @@ public class ChatViewModel extends AndroidViewModel {
     /** Called automatically whenever SharedViewModel changes */
     public void switchToSession(ChatSession s) {
         if (s == null) return;
+        
+        Log.d("ChatViewModel", "Switching to session: " + s.getTitle());
         currentSessionId = s.getId();
         sessionTitle.setValue(s.getTitle());
 
-        if (roomSource != null) messages.removeSource(roomSource);
+        // Remove previous message source if any
+        if (roomSource != null) {
+            messages.removeSource(roomSource);
+        }
+        
+        // Set new message source
         roomSource = repo.getMessagesForSession(currentSessionId);
-        messages.addSource(roomSource, messages::setValue);
+        messages.addSource(roomSource, newMessages -> {
+            if (newMessages != null) {
+                Log.d("ChatViewModel", "New messages loaded: " + newMessages.size());
+                messages.setValue(newMessages);
+            }
+        });
+    }
 
+    /**
+     * Rebuilds the chat context with all current messages.
+     * Should be called when messages change or when switching sessions.
+     */
+    private void rebuildChatContext() {
+        if (isInitializing) return;
+        
+        List<ChatMessage> messageList = messages.getValue();
+        if (messageList == null || messageList.isEmpty()) {
+            Log.d("ChatViewModel", "No messages to build context, using empty chat");
+            chat = model.startChat(); // Start with empty context
+            return;
+        }
+        
         List<Content> history = new ArrayList<>();
-
-        for (ChatMessage m : Objects.requireNonNull(messages.getValue())) {
+        for (ChatMessage m : messageList) {
             Content.Builder msg_builder = new Content.Builder();
             msg_builder.addText(m.getMessage());
             msg_builder.setRole(m.isFromUser() ? "user" : "model");
             history.add(msg_builder.build());
         }
-        Log.d("ChatViewModel", "History size: " + history.size());
-        setChat(model.startChat(history));
+        
+        Log.d("ChatViewModel", "Rebuilding chat context with " + history.size() + " messages");
+        chat = model.startChat(history);
     }
 
     private final Observer<Boolean> resetObs = reset -> {
         if (Boolean.TRUE.equals(reset)) createNewSession();
+    };
+    
+    private final Observer<Boolean> modelChangedObs = changed -> {
+        if (Boolean.TRUE.equals(changed)) {
+            // Reinitialize model when settings change
+            Log.d("ChatViewModel", "Model changed, reinitializing");
+            initializeModel();
+            
+            // Rebuild chat context with new model
+            rebuildChatContext();
+            
+            // Reset the flag - added null check
+            if (shared != null) {
+                shared.setModelChanged(false);
+            }
+        }
     };
 
     private void ensureSession() {
