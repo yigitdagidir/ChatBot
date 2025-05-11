@@ -73,7 +73,9 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/clear_history"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
                     android:textColor="?attr/colorError"
+                    app:strokeColor="?attr/colorError"
                     app:icon="@android:drawable/ic_menu_delete"
                     app:iconTint="?attr/colorError" />
 
