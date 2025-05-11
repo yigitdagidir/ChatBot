@@ -84,7 +84,7 @@ public class ChatViewModel extends AndroidViewModel {
             Log.d("ChatViewModel", "Initializing model: " + selectedModel);
             _gm = new GenerativeModel(selectedModel, BuildConfig.apiKey);
             model = GenerativeModelFutures.from(_gm);
-            chat = model.startChat(); // Start with empty context, will be filled later
+            chat = model.startChat();
         } finally {
             isInitializing = false;
         }
@@ -121,14 +121,13 @@ public class ChatViewModel extends AndroidViewModel {
         if (session == null) {
             Log.d("ChatViewModel", "Session no longer exists, creating new session");
             createNewSession();
-            
-            // Verify we now have a valid session
+
             if (currentSessionId <= 0) {
                 Log.e("ChatViewModel", "Failed to create session after second attempt. Message not sent.");
                 return;
             }
             
-            // Get the session again after creation
+
             session = repo.getSessionByIdSync(currentSessionId);
             if (session == null) {
                 Log.e("ChatViewModel", "Session still doesn't exist after creation. Message not sent.");
@@ -136,13 +135,9 @@ public class ChatViewModel extends AndroidViewModel {
             }
         }
 
-        final long sessionId = currentSessionId; // Capture for callback
+        final long sessionId = currentSessionId;
         Log.d("ChatViewModel", "Sending message to session " + sessionId);
-        
-        // Insert user message
         repo.insertMessage(new ChatMessage(text, true, sessionId));
-
-        // Build message for AI
         Content.Builder msg_builder = new Content.Builder();
         msg_builder.addText(text);
         msg_builder.setRole("user");
@@ -153,7 +148,6 @@ public class ChatViewModel extends AndroidViewModel {
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
-                // Verify session still exists before inserting response
                 if (repo.getSessionByIdSync(sessionId) != null) {
                     repo.insertMessage(
                             new ChatMessage(result.getText(), false, sessionId)
@@ -165,7 +159,6 @@ public class ChatViewModel extends AndroidViewModel {
 
             @Override
             public void onFailure(Throwable t) {
-                // Verify session still exists before inserting error
                 if (repo.getSessionByIdSync(sessionId) != null) {
                     repo.insertMessage(
                             new ChatMessage("Error: " + t.getMessage(), false, sessionId)
@@ -182,14 +175,10 @@ public class ChatViewModel extends AndroidViewModel {
         String title = new SimpleDateFormat("'Chat •' MMM dd HH:mm",
                 Locale.getDefault()).format(new Date());
 
-        // New sessions always use the current selected model
         String currentModel = dataStoreManager.getSelectedModel();
         ChatSession s = new ChatSession(title, currentModel);
         long id = repo.insertSessionSync(s);
         s.setId(id);
-
-        // Don't add a welcome message since the user's message will be the first one
-        // when triggered from sendMessage
 
         shared.selectSession(s);
         switchToSession(s);
@@ -206,8 +195,6 @@ public class ChatViewModel extends AndroidViewModel {
         ChatSession s = new ChatSession(title, "openai");
         long id       = repo.insertSessionSync(s);
         s.setId(id);
-
-        // Add welcome message for explicitly created sessions
         repo.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
@@ -217,13 +204,9 @@ public class ChatViewModel extends AndroidViewModel {
         switchToSession(s);
     }
 
-    /* ---------------- internals ---------------- */
-
     /** Called automatically whenever SharedViewModel changes */
     public void switchToSession(ChatSession s) {
         if (s == null) {
-            // If session is null, it might be due to reset
-            // Don't change current state until a new session is created
             Log.d("ChatViewModel", "Received null session, waiting for reset to complete");
             return;
         }
@@ -232,12 +215,9 @@ public class ChatViewModel extends AndroidViewModel {
         currentSessionId = s.getId();
         sessionTitle.setValue(s.getTitle());
 
-        // Remove previous message source if any
         if (roomSource != null) {
             messages.removeSource(roomSource);
         }
-
-        // Set new message source
         roomSource = repo.getMessagesForSession(currentSessionId);
         messages.addSource(roomSource, newMessages -> {
             if (newMessages != null) {
@@ -257,7 +237,7 @@ public class ChatViewModel extends AndroidViewModel {
         List<ChatMessage> messageList = messages.getValue();
         if (messageList == null || messageList.isEmpty()) {
             Log.d("ChatViewModel", "No messages to build context, using empty chat");
-            chat = model.startChat(); // Start with empty context
+            chat = model.startChat();
             return;
         }
 
@@ -275,8 +255,6 @@ public class ChatViewModel extends AndroidViewModel {
 
     private final Observer<Boolean> resetObs = reset -> {
         if (Boolean.TRUE.equals(reset)) {
-            // If we receive a reset signal but don't have a selected session yet,
-            // create a new one with welcome message
             if (shared.getSelectedSession().getValue() == null) {
                 createNewSessionWithWelcome();
             }
@@ -285,23 +263,15 @@ public class ChatViewModel extends AndroidViewModel {
 
     private final Observer<Boolean> modelChangedObs = changed -> {
         if (Boolean.TRUE.equals(changed)) {
-            // Reinitialize model when settings change
             Log.d("ChatViewModel", "Model changed, reinitializing");
             initializeModel();
 
-            // Rebuild chat context with new model
             rebuildChatContext();
-
-            // Reset the flag - added null check
             if (shared != null) {
                 shared.setModelChanged(false);
             }
         }
     };
-
-    private void ensureSession() {
-        if (currentSessionId <= 0) createNewSession();
-    }
 
     public ChatFutures getChat() {
         return chat;
@@ -314,15 +284,13 @@ public class ChatViewModel extends AndroidViewModel {
     @Override
     protected void onCleared() {
         super.onCleared();
-        
-        // Remove all observers to prevent memory leaks
+
         if (shared != null) {
             shared.isSessionReset().removeObserver(resetObs);
             shared.isModelChanged().removeObserver(modelChangedObs);
             shared.getSelectedSession().removeObserver(this::switchToSession);
         }
-        
-        // Also clean up message observer
+
         messages.removeObserver(messageList -> {
             if (!isInitializing && messageList != null && !messageList.isEmpty()) {
                 rebuildChatContext();

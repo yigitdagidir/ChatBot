@@ -63,31 +63,30 @@ public class SettingsViewModel extends AndroidViewModel {
         ChatSession newSession = null;
         
         try {
-            // Log operation start
             Log.d("SettingsViewModel", "Clearing chat history - starting database wipe");
             
-            // Perform database wipe synchronously
+
             repository.wipeDatabaseNow();
             
-            // Signal reset in progress
+
             Log.d("SettingsViewModel", "Database wiped, signaling reset to other components");
             sharedViewModel.resetSession();
             
-            // Create a new session after reset
+
             Log.d("SettingsViewModel", "Creating new session after reset");
             newSession = createSessionAfterReset();
             
-            // Select the new session to broadcast to all components
+
             Log.d("SettingsViewModel", "Selecting new session: " + newSession.getId());
             sharedViewModel.selectSession(newSession);
             
-            // Success log
+
             Log.d("SettingsViewModel", "Chat history cleared successfully");
         } catch (Exception e) {
-            // Log error but don't crash
+
             Log.e("SettingsViewModel", "Error clearing chat history", e);
             
-            // Try to recover by creating a new session anyway
+
             try {
                 newSession = createSessionAfterReset();
                 sharedViewModel.selectSession(newSession);

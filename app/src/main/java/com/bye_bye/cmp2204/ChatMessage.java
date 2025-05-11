@@ -30,8 +30,7 @@ public class ChatMessage {
         this.isFromUser = false;
         this.sessionId = 0;
     }
-    
-    // Constructor used by application code
+
     @Ignore
     public ChatMessage(String message, boolean isFromUser, long sessionId) {
         this.message = message;

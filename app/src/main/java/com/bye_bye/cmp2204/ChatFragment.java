@@ -41,7 +41,6 @@ public class ChatFragment extends Fragment {
 
     @Override
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
-        /* ---------- UI setup ---------- */
         RecyclerView list = v.findViewById(R.id.messagesRecyclerView);
         adapter      = new MessageAdapter();
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
@@ -55,25 +54,18 @@ public class ChatFragment extends Fragment {
         drawer = requireActivity().findViewById(R.id.main);
         ((AppCompatActivity) requireActivity()).setSupportActionBar(bar);
         bar.setNavigationOnClickListener(bt -> drawer.open());
-
-        /* ---------- LiveData ---------- */
         chatVm.getMessages().observe(getViewLifecycleOwner(),
                 listData -> {
                     adapter.submitList(new ArrayList<>(listData));
-                    
-                    // Scroll to the bottom when data is loaded
                     if (listData != null && !listData.isEmpty()) {
                         list.post(() -> list.smoothScrollToPosition(listData.size() - 1));
                     }
                 });
 
         chatVm.getCurrentSessionTitle().observe(getViewLifecycleOwner(), bar::setTitle);
-
-        /* react to sidebar selection */
         shared.getSelectedSession().observe(getViewLifecycleOwner(), session -> {
             if (session != null) {
                 chatVm.switchToSession(session);
-                // Set focus to input field
                 messageInput.requestFocus();
             }
         });
@@ -86,8 +78,6 @@ public class ChatFragment extends Fragment {
             messageInput.setText("");
         }
     }
-
-    /* toolbar menu (new chat) */
     @Override public void onCreateOptionsMenu(@NonNull Menu m,@NonNull MenuInflater inf){
         inf.inflate(R.menu.chat_menu, m);
     }

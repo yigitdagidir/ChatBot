@@ -45,13 +45,13 @@ public class SidebarFragment extends Fragment {
     public void onViewCreated(@NonNull View v, @Nullable Bundle s) {
         super.onViewCreated(v, s);
 
-        /* --------- DrawerLayout (null-safe) ---------- */
+
         drawerLayout = requireActivity().findViewById(R.id.main);
         if (drawerLayout == null) {                       // <-- real device edge-case
             drawerLayout = findDrawerInHierarchy(v);
         }
 
-        /* -------- Recycler of sessions -------- */
+
         RecyclerView list = v.findViewById(R.id.sessionsRecyclerView);
         adapter = new SessionAdapter(session -> {
             sharedViewModel.selectSession(session);
@@ -60,7 +60,7 @@ public class SidebarFragment extends Fragment {
         list.setLayoutManager(new LinearLayoutManager(requireContext()));
         list.setAdapter(adapter);
 
-        /* -------- Buttons -------- */
+
         MaterialButton newChat = v.findViewById(R.id.newChatButton);
         newChat.setOnClickListener(b -> {
             viewModel.createNewSession();
@@ -70,12 +70,12 @@ public class SidebarFragment extends Fragment {
         MaterialButton settings = v.findViewById(R.id.settingsButton);
         settings.setOnClickListener(b -> navigate(R.id.settingsFragment));
 
-        /* -------- LiveData -------- */
+
         viewModel.getSessions().observe(getViewLifecycleOwner(),
                 sessions -> adapter.submitList(sessions));
     }
 
-    /* ---------------- helpers ---------------- */
+
 
     /** Close the drawer (if we actually have it) and go to destination */
     private void navigate(int destId) {

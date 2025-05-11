@@ -16,7 +16,6 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 public class SettingsFragment extends Fragment {
     private SettingsViewModel viewModel;
@@ -66,7 +65,7 @@ public class SettingsFragment extends Fragment {
 
         // Setup model selection
         viewModel.getSelectedModel().observe(getViewLifecycleOwner(), model -> {
-            // Only set text if different to prevent callback loop
+
             if (!model.equals(modelSelector.getText().toString())) {
                 modelSelector.setText(model, false);
             }
@@ -77,17 +76,17 @@ public class SettingsFragment extends Fragment {
             changeModel(selectedModel);
         });
 
-        // Setup clear history button
+
         clearHistoryButton.setOnClickListener(v -> showClearHistoryDialog());
     }
 
     private void setupToolbar() {
         toolbar.setNavigationOnClickListener(v -> {
             try {
-                // Try to navigate back using Navigation component
+
                 Navigation.findNavController(requireView()).navigateUp();
             } catch (Exception e) {
-                // Fallback to fragment manager
+
                 requireActivity().onBackPressed();
             }
         });
@@ -111,19 +110,14 @@ public class SettingsFragment extends Fragment {
                     Toast.makeText(requireContext(), 
                         R.string.history_cleared, 
                         Toast.LENGTH_SHORT).show();
-                    
-                    // Navigate to chat fragment with a short delay to ensure UI updates
                     requireView().postDelayed(() -> {
                         try {
                             if (isAdded() && !isRemoving()) {
-                                // Ensure the session is selected
                                 sharedViewModel.selectSession(newSession);
-                                
-                                // Navigate to chat fragment
+
                                 Navigation.findNavController(requireView())
                                     .navigate(R.id.action_settingsFragment_to_chatFragment);
-                                
-                                // Log successful navigation
+
                                 android.util.Log.d("SettingsFragment", 
                                     "Navigated to chat fragment for session: " + newSession.getId());
                             }
@@ -131,9 +125,9 @@ public class SettingsFragment extends Fragment {
                             android.util.Log.e("SettingsFragment", 
                                 "Error navigating after history clear", e);
                         }
-                    }, 200); // Short delay for UI to update
+                    }, 200);
                 } else {
-                    // Show error message if session creation failed
+
                     Toast.makeText(requireContext(), 
                         "Failed to create new session after clearing history", 
                         Toast.LENGTH_SHORT).show();
@@ -144,10 +138,9 @@ public class SettingsFragment extends Fragment {
     }
 
     private void changeModel(String model) {
-        // Change the model in the ViewModel
+
         viewModel.setSelectedModel(model);
-        
-        // Show confirmation toast
+
         Toast.makeText(requireContext(),
             getString(R.string.model_changed) + model,
             Toast.LENGTH_SHORT).show();

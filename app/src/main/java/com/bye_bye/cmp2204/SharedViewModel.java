@@ -12,20 +12,20 @@ public class SharedViewModel extends ViewModel {
     // Current session data
     private final MutableLiveData<ChatSession> selectedSession = new MutableLiveData<>();
     
-    // Flag to indicate a reset has occurred
+
     private final MutableLiveData<Boolean> sessionReset = new MutableLiveData<>(false);
     
     // Flag to indicate a model change
     private final MutableLiveData<Boolean> modelChanged = new MutableLiveData<>(false);
     
-    // Flag to indicate reset is in progress to prevent race conditions
+
     private volatile boolean isResetInProgress = false;
 
     /**
      * Set the currently selected chat session
      */
     public synchronized void selectSession(ChatSession session) {
-        // Don't allow session selection while reset is in progress
+
         if (isResetInProgress && session == null) {
             Log.d("SharedViewModel", "Ignoring null session during reset");
             return;
@@ -39,7 +39,7 @@ public class SharedViewModel extends ViewModel {
         
         selectedSession.postValue(session);
         
-        // Clear any reset flag when a session is explicitly selected
+
         if (sessionReset.getValue() && session != null) {
             sessionReset.postValue(false);
         }
@@ -67,7 +67,7 @@ public class SharedViewModel extends ViewModel {
             // Set the reset flag to true
             sessionReset.postValue(true);
         } finally {
-            // Ensure we always clear the flag even if an exception occurs
+
             isResetInProgress = false;
         }
     }
