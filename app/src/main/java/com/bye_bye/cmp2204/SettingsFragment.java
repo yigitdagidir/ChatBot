@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AutoCompleteTextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -15,17 +16,21 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 
 public class SettingsFragment extends Fragment {
     private SettingsViewModel viewModel;
+    private SharedViewModel sharedViewModel;
     private MaterialSwitch themeSwitch;
     private MaterialButton clearHistoryButton;
     private MaterialToolbar toolbar;
+    private AutoCompleteTextView modelSelector;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewModel = new ViewModelProvider(this).get(SettingsViewModel.class);
+        sharedViewModel = new ViewModelProvider(requireActivity()).get(SharedViewModel.class);
     }
 
     @Nullable
@@ -41,6 +46,7 @@ public class SettingsFragment extends Fragment {
         toolbar = view.findViewById(R.id.settingsToolbar);
         themeSwitch = view.findViewById(R.id.themeSwitch);
         clearHistoryButton = view.findViewById(R.id.clearHistoryButton);
+        modelSelector = view.findViewById(R.id.model_selector);
 
         // Setup toolbar
         setupToolbar();
@@ -58,6 +64,18 @@ public class SettingsFragment extends Fragment {
             );
         });
 
+        // Setup model selection
+        viewModel.getSelectedModel().observe(getViewLifecycleOwner(), model -> {
+            // Only set text if different to prevent callback loop
+            if (!model.equals(modelSelector.getText().toString())) {
+                modelSelector.setText(model, false);
+            }
+        });
+
+        modelSelector.setOnItemClickListener((parent, view1, position, id) -> {
+            String selectedModel = parent.getItemAtPosition(position).toString();
+            changeModel(selectedModel);
+        });
 
         // Setup clear history button
         clearHistoryButton.setOnClickListener(v -> showClearHistoryDialog());
@@ -98,5 +116,15 @@ public class SettingsFragment extends Fragment {
             })
             .setNegativeButton(R.string.cancel, null)
             .show();
+    }
+
+    private void changeModel(String model) {
+        // Change the model in the ViewModel
+        viewModel.setSelectedModel(model);
+        
+        // Show confirmation toast
+        Toast.makeText(requireContext(),
+            getString(R.string.model_changed) + model,
+            Toast.LENGTH_SHORT).show();
     }
 }

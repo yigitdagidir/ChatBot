@@ -1,0 +1,8 @@
+<resources>
+    <string-array name="models">
+        <item>gemini-2.0-flash</item>
+        <item>gemini-2.5-pro-exp-03-25</item>
+        <item>gemini-1.5-flash</item>
+        <item>gemini-1.5-pro</item>
+    </string-array>
+</resources>

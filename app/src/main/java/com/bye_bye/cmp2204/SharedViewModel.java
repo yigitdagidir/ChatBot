@@ -13,6 +13,9 @@ public class SharedViewModel extends ViewModel {
     
     // Flag to indicate a reset has occurred
     private final MutableLiveData<Boolean> sessionReset = new MutableLiveData<>(false);
+    
+    // Flag to indicate a model change
+    private final MutableLiveData<Boolean> modelChanged = new MutableLiveData<>(false);
 
     /**
      * Set the currently selected chat session
@@ -50,5 +53,19 @@ public class SharedViewModel extends ViewModel {
      */
     public LiveData<Boolean> isSessionReset() {
         return sessionReset;
+    }
+    
+    /**
+     * Set the model changed flag
+     */
+    public void setModelChanged(boolean changed) {
+        modelChanged.setValue(changed);
+    }
+    
+    /**
+     * Check if the model has changed
+     */
+    public LiveData<Boolean> isModelChanged() {
+        return modelChanged;
     }
 } 

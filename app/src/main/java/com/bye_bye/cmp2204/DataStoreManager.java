@@ -2,24 +2,24 @@ package com.bye_bye.cmp2204;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 
 /**
- * Data storage manager for app preferences.
- * Using SharedPreferences for Java compatibility instead of DataStore.
+ * Manager class for DataStore operations
  */
 public class DataStoreManager {
-    private static final String PREFERENCES_NAME = "settings";
     private static final String KEY_DARK_THEME = "dark_theme";
-
+    private static final String KEY_SELECTED_MODEL = "selected_model";
+    private static final String DEFAULT_MODEL = "gemini-2.0-flash";
+    
     private final SharedPreferences preferences;
 
     public DataStoreManager(Context context) {
-        this.preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE);
+        preferences = PreferenceManager.getDefaultSharedPreferences(context);
     }
 
     /**
-     * Get the current theme setting
-     * @return true if dark theme is enabled, false otherwise
+     * Get the dark theme preference
      */
     public boolean getDarkTheme() {
         return preferences.getBoolean(KEY_DARK_THEME, false);
@@ -27,9 +27,22 @@ public class DataStoreManager {
 
     /**
      * Set the dark theme preference
-     * @param isDark true to enable dark theme, false for light theme
      */
-    public void setDarkTheme(boolean isDark) {
-        preferences.edit().putBoolean(KEY_DARK_THEME, isDark).apply();
+    public void setDarkTheme(boolean isDarkTheme) {
+        preferences.edit().putBoolean(KEY_DARK_THEME, isDarkTheme).apply();
     }
-} 
+    
+    /**
+     * Get the currently selected model
+     */
+    public String getSelectedModel() {
+        return preferences.getString(KEY_SELECTED_MODEL, DEFAULT_MODEL);
+    }
+    
+    /**
+     * Set the selected model
+     */
+    public void setSelectedModel(String model) {
+        preferences.edit().putString(KEY_SELECTED_MODEL, model).apply();
+    }
+}

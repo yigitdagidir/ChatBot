@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelStoreOwner;
 
 public class SettingsViewModel extends AndroidViewModel {
     private final MutableLiveData<Boolean> isDarkTheme;
+    private final MutableLiveData<String> selectedModel;
     private final DataStoreManager dataStoreManager;
     private final ChatRepository repository;
     private final SharedViewModel sharedViewModel;
@@ -24,6 +25,9 @@ public class SettingsViewModel extends AndroidViewModel {
         
         // Load saved theme preference
         isDarkTheme = new MutableLiveData<>(dataStoreManager.getDarkTheme());
+        
+        // Load saved model preference
+        selectedModel = new MutableLiveData<>(dataStoreManager.getSelectedModel());
     }
 
     public LiveData<Boolean> isDarkTheme() {
@@ -33,6 +37,18 @@ public class SettingsViewModel extends AndroidViewModel {
     public void setDarkTheme(boolean isDark) {
         dataStoreManager.setDarkTheme(isDark);
         isDarkTheme.setValue(isDark);
+    }
+    
+    public LiveData<String> getSelectedModel() {
+        return selectedModel;
+    }
+    
+    public void setSelectedModel(String model) {
+        dataStoreManager.setSelectedModel(model);
+        selectedModel.setValue(model);
+        
+        // Notify that the model has changed
+        sharedViewModel.setModelChanged(true);
     }
 
     public void clearChatHistory() {

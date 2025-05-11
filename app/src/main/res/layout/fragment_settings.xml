@@ -13,7 +13,7 @@
         android:background="?attr/colorSurface"
         android:elevation="4dp"
         app:navigationIcon="@android:drawable/ic_menu_revert"
-        app:title="@string/settings" />
+        app:title="@string/settings"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -74,11 +74,51 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/clear_history"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:textColor="?attr/colorError"
-                    app:strokeColor="?attr/colorError"
+                    android:textColor="@android:color/white"
                     app:icon="@android:drawable/ic_menu_delete"
-                    app:iconTint="?attr/colorError" />
+                    app:iconTint="@android:color/white"
+                    app:backgroundTint="@color/design_default_color_error"
+                    style="@style/Widget.Material3.Button"
+                    android:padding="12dp"
+                    app:elevation="4dp" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardElevation="2dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:text="@string/model_selection_header"
+                    android:textAppearance="?attr/textAppearanceHeadline6" />
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/menu"
+                    style="@style/Widget.Material3.TextInputLayout.FilledBox.ExposedDropdownMenu"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/model_selection_hint">
+
+                    <AutoCompleteTextView
+                        android:id="@+id/model_selector"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="none"
+                        app:simpleItems="@array/models" />
+
+                </com.google.android.material.textfield.TextInputLayout>
 
             </LinearLayout>
 
