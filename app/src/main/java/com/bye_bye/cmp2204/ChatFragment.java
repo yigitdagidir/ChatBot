@@ -79,7 +79,7 @@ public class ChatFragment extends Fragment {
         inf.inflate(R.menu.chat_menu, m);
     }
     @Override public boolean onOptionsItemSelected(@NonNull MenuItem i){
-        if(i.getItemId()==R.id.action_new_chat){ chatVm.createNewSession(); return true; }
+        if(i.getItemId()==R.id.action_new_chat){ chatVm.createNewSessionWithWelcome(); return true; }
         if(i.getItemId()==R.id.action_settings){
             Navigation.findNavController(requireView()).navigate(R.id.settingsFragment); return true;
         }

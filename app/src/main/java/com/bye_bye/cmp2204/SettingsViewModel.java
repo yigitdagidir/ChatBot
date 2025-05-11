@@ -38,5 +38,6 @@ public class SettingsViewModel extends AndroidViewModel {
     public void clearChatHistory() {
         repository.wipeDatabaseNow();        // ← synchronous – guaranteed empty DB
         sharedViewModel.resetSession();      // flag so Chat / Sidebar react
+        // The resetObs observer in ChatViewModel will automatically create a new session
     }
 }

@@ -48,15 +48,13 @@ public class ChatViewModel extends AndroidViewModel {
 
         shared.isSessionReset().observeForever(resetObs);
 
-
         messages.setValue(new ArrayList<>());
 
         /* whenever the sidebar (or anyone) selects a session → swap the message source */
         shared.getSelectedSession().observeForever(this::switchToSession);
-        if (shared.getSelectedSession().getValue() == null && repo.getSessionCount() == 0)
-        {
-            createNewSession();
-        }
+        
+        // Don't automatically create a new session here
+        // We'll create it when the user sends a message
     }
 
     /* ---------------- public for UI ---------------- */
@@ -67,8 +65,14 @@ public class ChatViewModel extends AndroidViewModel {
     public void sendMessage(String text) {
         if (text == null || text.trim().isEmpty()) return;
 
+        // Create a new session if none exists
         if (currentSessionId <= 0) {
-            Log.e("ChatViewModel", "No valid session. Message not sent.");
+            createNewSession();
+        }
+
+        // Now we should have a valid session ID
+        if (currentSessionId <= 0) {
+            Log.e("ChatViewModel", "Failed to create session. Message not sent.");
             return;
         }
 
@@ -106,6 +110,26 @@ public class ChatViewModel extends AndroidViewModel {
         long id       = repo.insertSessionSync(s);
         s.setId(id);
 
+        // Don't add a welcome message since the user's message will be the first one
+        // when triggered from sendMessage
+
+        shared.selectSession(s);
+        switchToSession(s);
+    }
+
+    /** 
+     * Creates a new session with welcome message.
+     * Used when explicitly creating a chat from UI or after reset.
+     */
+    public void createNewSessionWithWelcome() {
+        String title = new SimpleDateFormat("'Chat •' MMM dd HH:mm",
+                Locale.getDefault()).format(new Date());
+
+        ChatSession s = new ChatSession(title, "openai");
+        long id       = repo.insertSessionSync(s);
+        s.setId(id);
+
+        // Add welcome message for explicitly created sessions
         repo.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
@@ -138,7 +162,7 @@ public class ChatViewModel extends AndroidViewModel {
     }
 
     private final Observer<Boolean> resetObs = reset -> {
-        if (Boolean.TRUE.equals(reset)) createNewSession();
+        if (Boolean.TRUE.equals(reset)) createNewSessionWithWelcome();
     };
 
     private void ensureSession() {

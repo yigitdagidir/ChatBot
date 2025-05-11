@@ -81,7 +81,7 @@ public class SidebarViewModel extends AndroidViewModel {
         long id       = repository.insertSessionSync(s);
         s.setId(id);
 
-        // welcome
+        // Add welcome message
         repository.insertMessageSync(new ChatMessage(
                 "Hello! How can I assist you today?", false, id));
 
