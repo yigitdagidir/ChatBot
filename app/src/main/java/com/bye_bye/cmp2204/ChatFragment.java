@@ -58,12 +58,25 @@ public class ChatFragment extends Fragment {
 
         /* ---------- LiveData ---------- */
         chatVm.getMessages().observe(getViewLifecycleOwner(),
-                listData -> adapter.submitList(new ArrayList<>(listData)));
+                listData -> {
+                    adapter.submitList(new ArrayList<>(listData));
+                    
+                    // Scroll to the bottom when data is loaded
+                    if (listData != null && !listData.isEmpty()) {
+                        list.post(() -> list.smoothScrollToPosition(listData.size() - 1));
+                    }
+                });
 
         chatVm.getCurrentSessionTitle().observe(getViewLifecycleOwner(), bar::setTitle);
 
         /* react to sidebar selection */
-        shared.getSelectedSession().observe(getViewLifecycleOwner(), chatVm::switchToSession);
+        shared.getSelectedSession().observe(getViewLifecycleOwner(), session -> {
+            if (session != null) {
+                chatVm.switchToSession(session);
+                // Set focus to input field
+                messageInput.requestFocus();
+            }
+        });
     }
 
     private void send() {
