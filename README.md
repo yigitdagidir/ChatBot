@@ -1,5 +1,5 @@
-# CMP2204 Android Project
-Team bye bye's CMP2204 Android project.
+# CMP2004 Android Project
+Team bye bye's CMP2004 Android project.
 
 ### API Key Configuration
 
